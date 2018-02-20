@@ -14,7 +14,8 @@ uses
   dxLayoutControl, cxClasses, dxSkinsForm,
   IdIMAP4, IdMessage, IdBaseComponent, IdComponent, IdTCPConnection,
   IdTCPClient, IdExplicitTLSClientServerBase, IdMessageClient, IdIOHandler,
-  IdIOHandlerSocket, IdIOHandlerStack, IdSSL, IdSSLOpenSSL, Vcl.ExtCtrls;
+  IdIOHandlerSocket, IdIOHandlerStack, IdSSL, IdSSLOpenSSL, Vcl.ExtCtrls,
+  dxSkinsdxStatusBarPainter, dxStatusBar, IdIntercept, IdLogBase, IdLogEvent;
 
 type
   TCopyType = (ctMessage, ctFolder, ctSelectedFolders);
@@ -52,6 +53,9 @@ type
     DSTTLS: TIdSSLIOHandlerSocketOpenSSL;
     TSRCImapTimeout: TTimer;
     TDSTImapTimeout: TTimer;
+    StatusBar: TdxStatusBar;
+    IdLogEvent1: TIdLogEvent;
+    TDoWork: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BStopCopyClick(Sender: TObject);
@@ -61,6 +65,7 @@ type
     procedure BCloseClick(Sender: TObject);
     procedure TSRCImapTimeoutTimer(Sender: TObject);
     procedure TDSTImapTimeoutTimer(Sender: TObject);
+    procedure TDoWorkTimer(Sender: TObject);
   private
     { Private declarations }
     FInWork: Boolean;
@@ -68,6 +73,9 @@ type
   public
     { Public declarations }
     FCopyType: TCopyType;
+
+    FStartTime: TDateTime;
+    FStopTime: TDateTime;
 
     FSRCMailBox, FDSTMailBox: TFMailBox;
     FSRCMessage, FDSTMessage: Integer;
@@ -111,6 +119,10 @@ end;
 
 procedure TFCopyProgress.StartWork;
 begin
+  FStartTime := Now;
+  FStopTime := Now;
+  TDoWork.Enabled := True;
+
   FInWork := True;
   BStartCopy.Enabled := False;
   BStopCopy.Enabled := True;
@@ -118,48 +130,12 @@ end;
 
 procedure TFCopyProgress.StopWork;
 begin
+  FStopTime := Now;
+  TDoWork.Enabled := False;
+
   FInWork := False;
   BStartCopy.Enabled := True;
   BStopCopy.Enabled := False;
-end;
-
-procedure TFCopyProgress.TDSTImapTimeoutTimer(Sender: TObject);
-begin
-  if DSTImap.Connected then
-  begin
-    if InWork then
-      Exit;
-//Костыль
-//Indy регулярно не знает об обрыве и Connected не показывает обрыв связи
-//Поэтому ловим Exeption - EIdConnClosedGracefully
-//и переподключаеися
-    try
-      DSTImap.KeepAlive;
-    except
-      DSTImap.Disconnect(True);
-      DSTImap.Connect;
-    end;
-  end;
-end;
-
-procedure TFCopyProgress.TSRCImapTimeoutTimer(Sender: TObject);
-begin
-  if SRCImap.Connected then
-  begin
-    if InWork then
-      Exit;
-//Костыль
-//Indy регулярно не знает об обрыве и Connected не показывает обрыв связи
-//Поэтому ловим Exeption - EIdConnClosedGracefully
-//и переподключаеися
-    try
-      SRCImap.KeepAlive;
-    except
-      SRCImap.Disconnect(True);
-      SRCImap.Connect;
-    end;
-  end;
-
 end;
 
 procedure TFCopyProgress.CanStartWork(ACanStartWork: Boolean);
@@ -307,13 +283,13 @@ begin
   SRCImap.SelectMailBox(FSRCFolder);
   DSTImap.SelectMailBox(FDSTFolder);
 
-  SRCImap.GetUID(FSRCMessage, MessageUID);
-  SRCImap.UIDRetrievePeek(MessageUID, MailMessage);
-  SRCImap.UIDRetrieveFlags(MessageUID, Flags);
+//  SRCImap.GetUID(FSRCMessage, MessageUID);
+//  SRCImap.UIDRetrievePeek(MessageUID, MailMessage);
+//  SRCImap.UIDRetrieveFlags(MessageUID, Flags);
+  SRCImap.RetrievePeek(FSRCMessage, MailMessage);
+  SRCImap.RetrieveFlags(FSRCMessage, Flags);
   DSTImap.AppendMsg(FDSTFolder, MailMessage, Flags);
 
-//  SRCImap.RetrievePeek(FSRCMessage, MailMessage);
-//  DSTImap.AppendMsg(FDSTFolder, MailMessage, []);
   TLFolders.Items[0].Values[2] := 1;
   TLFolders.Items[0].Values[3] := 0;
   TLFolders.Items[0].Values[4] := 100;
@@ -362,9 +338,11 @@ begin
     else
       Exit;
 
-    SRCImap.GetUID(I, MessageUID);
-    SRCImap.UIDRetrievePeek(MessageUID, MailMessage);
-    SRCImap.UIDRetrieveFlags(MessageUID, Flags);
+//    SRCImap.GetUID(I, MessageUID);
+//    SRCImap.UIDRetrievePeek(MessageUID, MailMessage);
+//    SRCImap.UIDRetrieveFlags(MessageUID, Flags);
+    SRCImap.RetrievePeek(I, MailMessage);
+    SRCImap.RetrieveFlags(I, Flags);
     DSTImap.AppendMsg(NewFolderName, MailMessage, Flags);
 
     TLFolders.Items[0].Values[2] := I;
@@ -479,6 +457,8 @@ var
   I: Integer;
 begin
   CanStartWork(False);
+
+  StatusBar.Panels[0].Text := '';
 
   TLFolders.Clear;
   TEDSTFolder.Text := '';
@@ -606,6 +586,7 @@ begin
     end;
   finally
     StopWork;
+    TDoWorkTimer(Sender);
   end;
 end;
 
@@ -625,5 +606,66 @@ begin
   Close;
 end;
 
+procedure TFCopyProgress.TDoWorkTimer(Sender: TObject);
+var
+  S: string;
+begin
+  if InWork then
+  begin
+    S := 'Start Time: ' +
+      FormatDateTime('yyyy.mm.dd hh:nn:ss', FStartTime) +
+      ' | Work time: ' +
+      FormatDateTime('hh:nn:ss', Now - FStartTime);
+  end
+  else
+  begin
+    S := 'Start Time: ' +
+      FormatDateTime('yyyy.mm.dd hh:nn:ss', FStartTime) +
+      ' | Stop time: ' +
+      FormatDateTime('yyyy.mm.dd hh:nn:ss', FStopTime) +
+      ' | Work time: ' +
+      FormatDateTime('hh:nn:ss', Now - FStartTime);
+    TDoWork.Enabled := False;
+  end;
+  StatusBar.Panels[0].Text := S;
+end;
+
+procedure TFCopyProgress.TDSTImapTimeoutTimer(Sender: TObject);
+begin
+  if DSTImap.Connected then
+  begin
+    if InWork then
+      Exit;
+//Костыль
+//Indy регулярно не знает об обрыве и Connected не показывает обрыв связи
+//Поэтому ловим Exeption - EIdConnClosedGracefully
+//и переподключаеися
+    try
+      DSTImap.KeepAlive;
+    except
+      DSTImap.Disconnect(True);
+      DSTImap.Connect;
+    end;
+  end;
+end;
+
+procedure TFCopyProgress.TSRCImapTimeoutTimer(Sender: TObject);
+begin
+  if SRCImap.Connected then
+  begin
+    if InWork then
+      Exit;
+//Костыль
+//Indy регулярно не знает об обрыве и Connected не показывает обрыв связи
+//Поэтому ловим Exeption - EIdConnClosedGracefully
+//и переподключаеися
+    try
+      SRCImap.KeepAlive;
+    except
+      SRCImap.Disconnect(True);
+      SRCImap.Connect;
+    end;
+  end;
+end;
 
 end.

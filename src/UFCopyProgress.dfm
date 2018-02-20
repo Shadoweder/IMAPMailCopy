@@ -2,9 +2,11 @@ object FCopyProgress: TFCopyProgress
   Left = 0
   Top = 0
   Caption = 'Copy Progress'
-  ClientHeight = 536
-  ClientWidth = 630
+  ClientHeight = 600
+  ClientWidth = 600
   Color = clBtnFace
+  Constraints.MinHeight = 600
+  Constraints.MinWidth = 600
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -21,14 +23,16 @@ object FCopyProgress: TFCopyProgress
   object dxLayoutControl1: TdxLayoutControl
     Left = 0
     Top = 0
-    Width = 630
-    Height = 536
+    Width = 600
+    Height = 580
     Align = alClient
     TabOrder = 0
     LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
+    ExplicitWidth = 630
+    ExplicitHeight = 536
     object BStartCopy: TcxButton
       Left = 19
-      Top = 489
+      Top = 533
       Width = 75
       Height = 25
       Caption = 'Start Copy'
@@ -36,8 +40,8 @@ object FCopyProgress: TFCopyProgress
       OnClick = BStartCopyClick
     end
     object BStopCopy: TcxButton
-      Left = 218
-      Top = 489
+      Left = 208
+      Top = 533
       Width = 75
       Height = 25
       Caption = 'Stop Copy'
@@ -46,7 +50,7 @@ object FCopyProgress: TFCopyProgress
     end
     object TEDSTFolder: TcxTextEdit
       Left = 111
-      Top = 426
+      Top = 470
       Properties.ReadOnly = True
       Style.HotTrack = False
       TabOrder = 1
@@ -136,8 +140,8 @@ object FCopyProgress: TFCopyProgress
       end
     end
     object BClose: TcxButton
-      Left = 418
-      Top = 489
+      Left = 398
+      Top = 533
       Width = 75
       Height = 25
       Caption = 'Close'
@@ -244,6 +248,25 @@ object FCopyProgress: TFCopyProgress
       Index = 2
     end
   end
+  object StatusBar: TdxStatusBar
+    Left = 0
+    Top = 580
+    Width = 600
+    Height = 20
+    Panels = <
+      item
+        PanelStyleClassName = 'TdxStatusBarTextPanelStyle'
+        Width = 200
+      end>
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ExplicitLeft = 108
+    ExplicitTop = 560
+    ExplicitWidth = 0
+  end
   object dxSkinController1: TdxSkinController
     NativeStyle = False
     SkinName = 'Office2007Blue'
@@ -316,5 +339,15 @@ object FCopyProgress: TFCopyProgress
     OnTimer = TDSTImapTimeoutTimer
     Left = 460
     Top = 216
+  end
+  object IdLogEvent1: TIdLogEvent
+    Left = 300
+    Top = 152
+  end
+  object TDoWork: TTimer
+    Enabled = False
+    OnTimer = TDoWorkTimer
+    Left = 60
+    Top = 80
   end
 end
