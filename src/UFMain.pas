@@ -12,7 +12,7 @@ uses
   dxLayoutContainer, dxLayoutControl, cxClasses, dxSkinscxPCPainter, dxSkinsForm,
   dxBarBuiltInMenu, cxSplitter, cxPC, dxLayoutcxEditAdapters, cxContainer,
   cxEdit, cxTextEdit, cxMaskEdit, cxDropDownEdit, cxCheckBox,
-  dxLayoutControlAdapters, Vcl.Menus, Vcl.StdCtrls, cxButtons, cxCustomData, cxStyles,
+  dxLayoutControlAdapters, Vcl.Menus, Vcl.StdCtrls, cxButtons, cxStyles,
   cxTL, cxTLdxBarBuiltInMenu, Vcl.ExtCtrls, cxInplaceContainer;
 
 type
@@ -48,6 +48,7 @@ type
     FSRCMailBox, FDSTMailBox: TFMailBox;
 
     procedure SetDefaultParams;
+    function CheckConnected: boolean;
   public
     { Public declarations }
   end;
@@ -58,8 +59,6 @@ var
 implementation
 
 {$R *.dfm}
-uses
-  UFLog;
 
 procedure TFMain.SetDefaultParams;
 begin
@@ -92,6 +91,24 @@ begin
   FDSTMailBox.SETimeout.Value := 60;
 end;
 
+function TFMain.CheckConnected: boolean;
+begin
+  Result := True;
+  if not(FSRCMailBox.Imap.Capability) then
+  begin
+    ShowMessage('Error! You are not connected. Please click Login to connect SRC MailBox.');
+    FSRCMailBox.PCMailbox.ActivePageIndex := 0;
+    Result := False;
+  end;
+
+  if not(FDSTMailBox.Imap.Capability) then
+  begin
+    ShowMessage('Error! You are not connected. Please click Login to connect DST MailBox.');
+    FDSTMailBox.PCMailbox.ActivePageIndex := 0;
+    Result := False;
+  end;
+end;
+
 ////////////////////////////////////////////////////////////////////////////////
 
 procedure TFMain.FormCreate(Sender: TObject);
@@ -117,16 +134,22 @@ end;
 
 procedure TFMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  if Assigned(FSRCMailBox) then
-  begin
-    FSRCMailBox.Close;
-    FSRCMailBox.FreeOnRelease;
+  try
+    if Assigned(FSRCMailBox) then
+    begin
+      FSRCMailBox.Close;
+      FSRCMailBox.FreeOnRelease;
+    end;
+  except on E: Exception do
   end;
 
-  if Assigned(FDSTMailBox) then
-  begin
-    FDSTMailBox.Close;
-    FDSTMailBox.FreeOnRelease;
+  try
+    if Assigned(FDSTMailBox) then
+    begin
+      FDSTMailBox.Close;
+      FDSTMailBox.FreeOnRelease;
+    end;
+  except on E: Exception do
   end;
 end;
 
@@ -147,19 +170,8 @@ end;
 
 procedure TFMain.BCopyMessageClick(Sender: TObject);
 begin
-  if not(FSRCMailBox.Imap.Connected) then
-  begin
-    ShowMessage('Error! You are not connected. Please click Login to connect SRC MailBox.');
-    FSRCMailBox.PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
-
-  if not(FDSTMailBox.Imap.Connected) then
-  begin
-    ShowMessage('Error! You are not connected. Please click Login to connect DST MailBox.');
-    FDSTMailBox.PCMailbox.ActivePageIndex := 0;
-    Exit;
-  end;
 
   FCopyProgress.FCopyType := ctMessage;
   FCopyProgress.FSRCMailBox := FSRCMailBox;
@@ -169,19 +181,8 @@ end;
 
 procedure TFMain.BCopyFolderClick(Sender: TObject);
 begin
-  if not(FSRCMailBox.Imap.Connected) then
-  begin
-    ShowMessage('Error! You are not connected. Please click Login to connect SRC MailBox.');
-    FSRCMailBox.PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
-
-  if not(FDSTMailBox.Imap.Connected) then
-  begin
-    ShowMessage('Error! You are not connected. Please click Login to connect DST MailBox.');
-    FDSTMailBox.PCMailbox.ActivePageIndex := 0;
-    Exit;
-  end;
 
   FCopyProgress.FCopyType := ctFolder;
   FCopyProgress.FSRCMailBox := FSRCMailBox;
@@ -191,19 +192,8 @@ end;
 
 procedure TFMain.BCopySelectedFoldersClick(Sender: TObject);
 begin
-  if not(FSRCMailBox.Imap.Connected) then
-  begin
-    ShowMessage('Error! You are not connected. Please click Login to connect SRC MailBox.');
-    FSRCMailBox.PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
-
-  if not(FDSTMailBox.Imap.Connected) then
-  begin
-    ShowMessage('Error! You are not connected. Please click Login to connect DST MailBox.');
-    FDSTMailBox.PCMailbox.ActivePageIndex := 0;
-    Exit;
-  end;
 
   FCopyProgress.FCopyType := ctSelectedFolders;
   FCopyProgress.FSRCMailBox := FSRCMailBox;

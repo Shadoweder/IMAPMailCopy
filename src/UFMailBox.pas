@@ -5,7 +5,6 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes,
-  IniFiles,
   cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, dxSkinsCore,
   dxSkinOffice2007Blue, dxLayoutLookAndFeels,
@@ -14,16 +13,13 @@ uses
   cxEdit, cxTextEdit, cxMaskEdit, cxDropDownEdit, cxCheckBox,
   dxLayoutControlAdapters, cxButtons,   cxCustomData, cxStyles,
   cxTL, cxTLdxBarBuiltInMenu, cxInplaceContainer,
-  dxSkinsdxStatusBarPainter, dxStatusBar, cxListView, cxMemo, IdMessage,
-  IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient,
-  IdMessageClient, IdIMAP4, IdExplicitTLSClientServerBase, IdIOHandler,
-  IdIOHandlerSocket, IdIOHandlerStack, IdSSL, IdSSLOpenSSL, cxLookupEdit,
-  cxDBLookupEdit, cxDBLookupComboBox, Data.DB, dxmdaset,
-  cxImage, dxGDIPlusClasses, Vcl.ExtCtrls, cxSpinEdit;
+  dxSkinsdxStatusBarPainter, dxStatusBar, cxListView, cxMemo,
+  cxLookupEdit, cxDBLookupEdit, cxDBLookupComboBox, Data.DB, dxmdaset,
+  Vcl.ExtCtrls, cxSpinEdit,
+  imapsend, mimemess, ssl_openssl,
+  dxGDIPlusClasses, cxImage;
 
 type
-  { TMyLookupComboBoxProperties }
-
   TMyLookupComboBoxProperties = class(TcxLookupComboBoxProperties)
   protected
     function GetDisplayLookupText(const AKey: TcxEditValue): string; override;
@@ -35,6 +31,8 @@ type
   end;
 
   TcxLookupComboBox = class(TMycxLookupComboBox);
+
+  TListFoldersType = (lftMailFolders, lftSubscribedMailFolders);
 
 type
   TFMailBox = class(TForm)
@@ -108,9 +106,6 @@ type
     dxLayoutSeparatorItem4: TdxLayoutSeparatorItem;
     BClearFolder: TcxButton;
     dxLayoutItem22: TdxLayoutItem;
-    Imap: TIdIMAP4;
-    MailMessage: TIdMessage;
-    TLS: TIdSSLIOHandlerSocketOpenSSL;
     dxLayoutSplitterItem1: TdxLayoutSplitterItem;
     TEFolderName: TcxTextEdit;
     dxLayoutItem23: TdxLayoutItem;
@@ -144,6 +139,12 @@ type
     TImapTimeout: TTimer;
     SETimeout: TcxSpinEdit;
     dxLayoutItem30: TdxLayoutItem;
+    BRenameFolder: TcxButton;
+    dxLayoutItem9: TdxLayoutItem;
+    BClearFolderFast: TcxButton;
+    dxLayoutItem31: TdxLayoutItem;
+    BNewRootFolder: TcxButton;
+    dxLayoutItem32: TdxLayoutItem;
     procedure FormCreate(Sender: TObject);
     procedure BLoginClick(Sender: TObject);
     procedure BLogoutClick(Sender: TObject);
@@ -168,6 +169,10 @@ type
     procedure BSelectAllFoldersClick(Sender: TObject);
     procedure BUnSelectAllFoldersClick(Sender: TObject);
     procedure TImapTimeoutTimer(Sender: TObject);
+    procedure TSMessagesShow(Sender: TObject);
+    procedure BRenameFolderClick(Sender: TObject);
+    procedure BClearFolderFastClick(Sender: TObject);
+    procedure BNewRootFolderClick(Sender: TObject);
   private
     { Private declarations }
     FInWork: Boolean;
@@ -175,7 +180,12 @@ type
     FWorkProcess: String;
   public
     { Public declarations }
+    Imap: TIMAPSend;
+
+    FListFoldersType: TListFoldersType;
+    FMailBoxSeparator: String;
     FMailFolders, FSubscribedMailFolders: TStrings;
+    FMessagesCount: Integer;
 
     procedure LoadProfiles(ALookupComboBox: TcxLookupComboBox);
     procedure SaveProfiles(ALookupComboBox: TcxLookupComboBox);
@@ -190,18 +200,17 @@ type
     function GetFolderName(ANode: TcxTreelistNode): string;
     function GetOriginalFolderName(ANode: TcxTreelistNode): string;
 
+    function StringToWideStringEx(const AString: String; ACodePage: Word): WideString;
+    function ConvertUTF7ImapToWideString(const AString: String): WideString;
+    function ConvertStringToUTF7Imap(const AString: String): String;
     function AddFolderToTreeList(const AName: String): TcxTreeListNode;
+
+    function CheckConnected: Boolean;
   end;
 
 implementation
 
 {$R *.dfm}
-
-
-{$IFDEF DEBUG}
-uses
-  UFLog;
-{$ENDIF}
 
 class function TMycxLookupComboBox.GetPropertiesClass: TcxCustomEditPropertiesClass;
 begin
@@ -305,6 +314,7 @@ var
   I: Integer;
   MailFolderName: String;
   TempNode: TcxTreeListNode;
+  S: string;
 begin
   TLFolders.BeginUpdate;
   try
@@ -317,8 +327,22 @@ begin
     LVMessages.Clear;
     MMessage.Clear;
 
-    Imap.ListMailBoxes(FMailFolders);
-    Imap.ListSubscribedMailBoxes(FSubscribedMailFolders);
+    FMailBoxSeparator := '';
+    Imap.IMAPcommand('LIST "' + '' + '" ""');
+    S := Imap.FullResult.Text;
+    I := Pos('" ""', S);
+    if I=0 then
+      I := Pos('" "/"', S);
+    if I > 3 then
+    begin
+      if S[I - 2] = '"' then
+        FMailBoxSeparator := S[I - 1];
+    end;
+    if FMailBoxSeparator = '' then
+      FMailBoxSeparator := '\';
+
+    Imap.List('', FMailFolders);
+    Imap.ListSubscribed('', FSubscribedMailFolders);
 
     for I := 0 to FMailFolders.Count - 1 do
     begin
@@ -332,9 +356,9 @@ begin
 
       MailFolderName := FMailFolders[I];
       TempNode := AddFolderToTreeList(MailFolderName);
-      Imap.SelectMailBox(MailFolderName);
-      TempNode.Texts[1] := IntToStr(Imap.MailBox.TotalMsgs);
       FMailFolders.Objects[I] := TObject(Integer(TempNode));
+      Imap.SelectROFolder(MailFolderName);
+      TempNode.Texts[1] := IntToStr(Imap.SelectedCount);
       if FSubscribedMailFolders.IndexOf(MailFolderName)<>-1 then
       begin
         TempNode.Values[2] := True;
@@ -359,6 +383,64 @@ begin
   end;
 end;
 
+function TFMailBox.StringToWideStringEx(const AString: String; ACodePage: Word): WideString;
+var
+  InputLength,
+  OutputLength: Integer;
+begin
+  InputLength := Length(AString);
+  OutputLength := MultiByteToWideChar(ACodePage, 0, PAnsiChar(AnsiString(AString)), InputLength, nil, 0);
+  SetLength(Result, OutputLength);
+  MultiByteToWideChar(ACodePage, 0, PAnsiChar(AnsiString(AString)), InputLength, PWideChar(Result), OutputLength);
+end;
+
+function TFMailBox.ConvertUTF7ImapToWideString(const AString: String): WideString;
+var
+  S, T: String;
+  I, J: Integer;
+begin
+  Result := '';
+  S := AString;
+  while True do
+  begin
+    I := Pos('&', S);
+    if I=0 then
+    begin
+      Result := Result + S;
+      Break;
+    end
+    else
+    begin
+      Result := Result + Copy(S, 1, I - 1);
+      Delete(S, 1, I - 1);
+      J := Pos('-', S);
+      T := Copy(S, 1, J);
+      Delete(S, 1, J);
+      T := StringReplace(T, '&', '+', [rfReplaceAll, rfIgnoreCase]);
+      T := StringReplace(T, ',', '/', [rfReplaceAll, rfIgnoreCase]);
+      T := StringToWideStringEx(T, CP_UTF7);
+      Result := Result + T;
+    end;
+  end;
+end;
+
+function TFMailBox.ConvertStringToUTF7Imap(const AString: String): string;
+var
+  StringStream: TStringStream;
+  I: Integer;
+begin
+  Result := '';
+  StringStream := TStringStream.Create(AString, TEncoding.UTF7);
+  try
+    for I := 0 to StringStream.Size - 1 do
+      Result := Result + Chr(StringStream.Bytes[I]);
+    Result := StringReplace(Result, '+', '&', [rfReplaceAll, rfIgnoreCase]);
+    Result := StringReplace(Result, '/', ',', [rfReplaceAll, rfIgnoreCase]);
+  finally
+    StringStream.Free;
+  end;
+end;
+
 function TFMailBox.AddFolderToTreeList(const AName: String): TcxTreeListNode;
 var
   I: Integer;
@@ -368,31 +450,47 @@ begin
   Result := nil;
   OwnerNode := TLFolders.Root;
   S := AName;
-  if S[1]=Imap.MailBoxSeparator then
+  if S[1]=FMailBoxSeparator then
     Delete(S, 1, 1);
 
   while True do
   begin
-    I := Pos(Imap.MailBoxSeparator, S);
+    I := Pos(FMailBoxSeparator, S);
     if I=0 then
     begin
       Result := TLFolders.AddChild(OwnerNode);
-      Result.Texts[0] := S;
+      Result.Texts[0] := ConvertUTF7ImapToWideString(S);
       Break;
     end
     else
     begin
       T := Copy(S, 1, I - 1);
       Delete(S, 1, I);
-      TempNode := TLFolders.FindNodeByText(T, TLFolders.Columns[0], OwnerNode, False, True, False);
+      TempNode := TLFolders.FindNodeByText(ConvertUTF7ImapToWideString(T), TLFolders.Columns[0], OwnerNode, False, True, False);
       if TempNode=nil then
       begin
         OwnerNode := TLFolders.AddChild(OwnerNode);
-        OwnerNode.Texts[0] := T;
+        OwnerNode.Texts[0] := ConvertUTF7ImapToWideString(T);
       end
       else
         OwnerNode := TempNode;
     end;
+  end;
+end;
+
+function TFMailBox.CheckConnected: Boolean;
+begin
+  Result := False;
+
+  try
+    Result := Imap.NoOp;
+  except
+  end;
+
+  if not(Result) then
+  begin
+    ShowMessage('You are not connected. Please click Login to connect.');
+    PCMailbox.ActivePageIndex := 0;
   end;
 end;
 
@@ -406,10 +504,10 @@ begin
   else
   begin
     Result := ANode.Texts[0];
-    while (ANode.Parent<>nil) do
+    while (ANode.Parent<>TLFolders.Root) do
     begin
       ANode := ANode.Parent;
-      Result := ANode.Texts[0] + Imap.MailBoxSeparator + Result;
+      Result := ANode.Texts[0] + FMailBoxSeparator + Result;
     end;
   end;
 end;
@@ -436,56 +534,52 @@ end;
 
 procedure TFMailBox.GetMessageList;
 var
-  I: Integer;
-  MessagesCount: Integer;
   TempItem: TListItem;
-  Flags: TIdMessageFlagsSet;
-  S: String;
-  MessageUID: string;
+  I: Integer;
+  MessageSize: Integer;
+  MimeMessage: TMimeMess;
+  MessageFlags: String;
 begin
   LVMessages.Clear;
   MMessage.Clear;
 
   StartWork('GetMessageList');
+  MimeMessage := TMimeMess.Create;
   try
-    MessagesCount := Imap.MailBox.TotalMsgs;
-    for I := 1 to MessagesCount do
+    Imap.SelectROFolder(GetOriginalFolderName(TLFolders.FocusedNode));
+    PCMailbox.ActivePageIndex := 2;
+    FMessagesCount := Imap.SelectedCount;
+    for I := 1 to FMessagesCount do
     begin
       if InWork then
       begin
-        SetWorkProcess(IntToStr(I) + '/' + IntToStr(MessagesCount));
+        SetWorkProcess(IntToStr(I) + '/' + IntToStr(FMessagesCount));
         Application.ProcessMessages;
       end
       else
+      begin
         Exit;
+      end;
 
-      Imap.GetUID(I, MessageUID);
-      Imap.RetrieveHeader(I, MailMessage);
-//      Imap.UIDRetrieveHeader(MessageUID, MailMessage);
+      Imap.FetchHeader(I, MimeMessage.Lines);
+      MessageSize := Imap.MessageSize(I);
+      Imap.GetFlagsMess(I, MessageFlags);
+
+      MimeMessage.DecodeMessage;
 
       TempItem := LVMessages.Items.Add;
       TempItem.Caption := IntToStr(I);
       TempItem.Data := Pointer(I);
 
-      TempItem.SubItems.Add(MessageUID);
-      TempItem.SubItems.Add(MailMessage.From.Address);
-      TempItem.SubItems.Add(MailMessage.Subject);
-      TempItem.SubItems.Add(DateTimeToStr(MailMessage.Date));
-      TempItem.SubItems.Add(IntToStr(Imap.RetrieveMsgSize(I)));
-
-      S := '';
-      Imap.RetrieveFlags(I, Flags);
-//      Imap.UIDRetrieveFlags(MessageUID, Flags);
-      if (mfAnswered in Flags) then S := S + 'Answered,';
-      if (mfFlagged in Flags) then S := S + 'Flagged,';
-      if (mfDeleted in Flags) then S := S + 'Deleted,';
-      if (mfSeen in Flags) then S := S + 'Seen,';
-      if (mfDraft in Flags) then S := S + 'Draft,';
-      if (mfRecent in Flags) then S := S + 'Recent,';
-
-      TempItem.SubItems.Add(S);
+      TempItem.SubItems.Add('');
+      TempItem.SubItems.Add(MimeMessage.Header.From);
+      TempItem.SubItems.Add(MimeMessage.Header.Subject);
+      TempItem.SubItems.Add(DateTimeToStr(MimeMessage.Header.Date));
+      TempItem.SubItems.Add(IntToStr(MessageSize));
+      TempItem.SubItems.Add(MessageFlags);
     end;
   finally
+    MimeMessage.Free;
     StopWork;
 
     if LVMessages.Items.Count>0 then
@@ -497,6 +591,8 @@ end;
 
 procedure TFMailBox.FormCreate(Sender: TObject);
 begin
+  Imap := TIMAPSend.Create;
+
   FMailFolders := TStringList.Create;
   FSubscribedMailFolders := TStringList.Create;
   StopWork;
@@ -509,17 +605,22 @@ begin
   BLogoutClick(Sender);
   FSubscribedMailFolders.Free;
   FMailFolders.Free;
+
+  Imap.Free;
 end;
 
 procedure TFMailBox.BLoginClick(Sender: TObject);
 begin
+  if Trim(TEServer.Text) = '' then
+    BLoadProfileClick(Sender);
+
   if (Trim(TEServer.Text) = '') or (Trim(TEUser.Text) = '') or (Trim(TEPassword.Text) = '') then
   begin
     ShowMessage('Check Login parameters!');
     Exit;
   end;
 
-  if Imap.Connected then
+  if Imap.Capability then
   begin
     ShowMessage('You are already connected. Please click Logout to disconnect.');
     Exit;
@@ -527,41 +628,27 @@ begin
 
   StopWork;
 
-  Imap.Host := Trim(TEServer.Text);
-  Imap.Port := StrToInt(Trim(TEPort.Text));
+  Imap.TargetHost := Trim(TEServer.Text);
+  Imap.TargetPort := Trim(TEPort.Text);
   Imap.UserName := Trim(TEUser.Text);
   Imap.Password := Trim(TEPassword.Text);
-  if ChBUseSASL.Checked then
-    Imap.AuthType := iatSASL
-  else
-    Imap.AuthType := iatUserPass;
-  if ChBUseTLS.Checked then
-    Imap.UseTLS := utUseImplicitTLS
-  else
-    Imap.UseTLS := utNoTLSSupport;
+
+  Imap.AutoTLS := ChBUseTLS.Checked;
+  Imap.FullSSL := ChBUseTLS.Checked;
 
   TImapTimeout.Interval := SETimeout.Value * 1000;
 
-  Imap.Connect;
+  try
+    Imap.Login;
+    if Imap.Capability then
+    begin
+      TImapTimeout.Enabled := True;
 
-  if Imap.Connected then
-  begin
-{$IFDEF DEBUG}
-    FLog.LogAddStrings([
-    Self.Name + ': ' + 'Server Connected',
-    'Server: ' + Imap.Host,
-    'Port: ' + IntToStr(Imap.Port),
-    'User: ' + Imap.UserName,
-    'Password: ' + Imap.Password,
-    'UseSASL: ' + BoolToStr(ChBUseSASL.Checked, True),
-    'UseTLS/SSL: ' + BoolToStr(ChBUseTLS.Checked, True),
-    'Timeout: ' + IntToStr(SETimeout.Value)]);
-{$ENDIF}
-
-    TImapTimeout.Enabled := True;
-
-    PCMailbox.ActivePageIndex := 1;
-    GetFolderList;
+      PCMailbox.ActivePageIndex := 1;
+      GetFolderList;
+    end;
+  except on E: Exception do
+    ShowMessage(E.Message);
   end;
 end;
 
@@ -575,68 +662,55 @@ begin
 
   TImapTimeout.Enabled := False;
 
-  if Imap.Connected then
+  if Imap.Capability then
   begin
-    Imap.Disconnect;
-{$IFDEF DEBUG}
-    FLog.LogAddStrings([
-    Self.Name + ': ' + 'Server Disconnected',
-    'Server: ' + Imap.Host,
-    'Port: ' + IntToStr(Imap.Port),
-    'User: ' + Imap.UserName,
-    'Password: ' + Imap.Password,
-    'UseSASL: ' + BoolToStr(ChBUseSASL.Checked, True),
-    'UseTLS/SSL: ' + BoolToStr(ChBUseTLS.Checked, True),
-    'Timeout: ' + IntToStr(SETimeout.Value)]);
-{$ENDIF}
+    Imap.Logout;
   end;
 end;
 
 procedure TFMailBox.TImapTimeoutTimer(Sender: TObject);
 begin
-  if Imap.Connected then
+  if Imap.Capability then
   begin
     if InWork then
       Exit;
-//Костыль
-//Indy регулярно не знает об обрыве и Connected не показывает обрыв связи
-//Поэтому ловим Exeption - EIdConnClosedGracefully
-//и переподключаеися
     try
-      Imap.KeepAlive;
+      Imap.Noop;
     except
-      Imap.Disconnect(True);
-//      Imap.Connect;
+      Imap.Logout;
+      Imap.Login;
     end;
   end;
 end;
 
 procedure TFMailBox.TLFoldersDblClick(Sender: TObject);
 begin
-  if (Imap.Connected) and (TLFolders.FocusedNode<>nil) then
+  if (Imap.Capability) and (TLFolders.FocusedNode<>nil) then
   begin
     StopWork;
 
-    Imap.SelectMailBox(GetOriginalFolderName(TLFolders.FocusedNode));
-    PCMailbox.ActivePageIndex := 2;
-    GetMessageList;
+    try
+      GetMessageList;
+    except on E: Exception do
+      ShowMessage(E.Message);
+     end;
   end;
 end;
 
 procedure TFMailBox.TLFoldersFocusedNodeChanged(Sender: TcxCustomTreeList;
   APrevFocusedNode, AFocusedNode: TcxTreeListNode);
 begin
-  if (Imap.Connected) and (TLFolders.FocusedNode<>nil) then
+  if (Imap.Capability) and (TLFolders.FocusedNode<>nil) then
   begin
     StopWork;
-    Imap.SelectMailBox(GetOriginalFolderName(TLFolders.FocusedNode));
     TEFolderName.Text := GetFolderName(TLFolders.FocusedNode);
+    Imap.SelectFolder(GetOriginalFolderName(TLFolders.FocusedNode));
   end;
 end;
 
 procedure TFMailBox.BGetFoldersListClick(Sender: TObject);
 begin
-  if not(Imap.Connected) then
+  if not(Imap.Capability) then
   begin
     StopWork;
 
@@ -647,17 +721,13 @@ begin
   GetFolderList;
 end;
 
-procedure TFMailBox.BNewFolderClick(Sender: TObject);
+procedure TFMailBox.BNewRootFolderClick(Sender: TObject);
 var
   NewFolderName: String;
   ClickedOK: Boolean;
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
   if TLFolders.FocusedNode<>nil then
   begin
@@ -667,15 +737,84 @@ begin
     ClickedOK := InputQuery('Create Folder', 'New Folder Name:', NewFolderName);
     if ClickedOK then
     begin
+      NewFolderName := Trim(NewFolderName);
       if NewFolderName='' then
       begin
-        ShowMessage('The value can not be empty');
+        ShowMessage('The Folder name can not be empty');
         Exit;
       end;
-      NewFolderName := StringReplace(NewFolderName, Imap.MailBoxSeparator, '_',[rfReplaceAll, rfIgnoreCase]);
-      NewFolderName := GetOriginalFolderName(TLFolders.FocusedNode) + Imap.MailBoxSeparator + NewFolderName;
-      Imap.CreateMailBox(NewFolderName);
-      Imap.SubscribeMailBox(NewFolderName);
+      NewFolderName := StringReplace(NewFolderName, FMailBoxSeparator, '_',[rfReplaceAll, rfIgnoreCase]);
+      NewFolderName := ConvertStringToUTF7Imap(NewFolderName);
+      Imap.CreateFolder(NewFolderName);
+      Imap.SubscribeFolder(NewFolderName);
+      GetFolderList;
+    end;
+  end;
+end;
+
+procedure TFMailBox.BNewFolderClick(Sender: TObject);
+var
+  NewFolderName: String;
+  ClickedOK: Boolean;
+begin
+  if not(CheckConnected) then
+    Exit;
+
+  if TLFolders.FocusedNode<>nil then
+  begin
+    StopWork;
+
+    NewFolderName := 'NewFolder';
+    ClickedOK := InputQuery('Create Folder', 'New Folder Name:', NewFolderName);
+    if ClickedOK then
+    begin
+      NewFolderName := Trim(NewFolderName);
+      if NewFolderName='' then
+      begin
+        ShowMessage('The Folder name can not be empty');
+        Exit;
+      end;
+      NewFolderName := StringReplace(NewFolderName, FMailBoxSeparator, '_',[rfReplaceAll, rfIgnoreCase]);
+      NewFolderName := GetOriginalFolderName(TLFolders.FocusedNode) + FMailBoxSeparator + ConvertStringToUTF7Imap(NewFolderName);
+      Imap.CreateFolder(NewFolderName);
+      Imap.SubscribeFolder(NewFolderName);
+      GetFolderList;
+    end;
+  end;
+end;
+
+procedure TFMailBox.BRenameFolderClick(Sender: TObject);
+var
+  NewFolderName: String;
+  ClickedOK: Boolean;
+begin
+  if not(CheckConnected) then
+    Exit;
+
+  if TLFolders.FocusedNode<>nil then
+  begin
+    StopWork;
+
+    NewFolderName := TLFolders.FocusedNode.Texts[0];
+    ClickedOK := InputQuery('Rename Folder', 'New Folder Name:', NewFolderName);
+    if ClickedOK then
+    begin
+      NewFolderName := Trim(NewFolderName);
+      if NewFolderName='' then
+      begin
+        ShowMessage('The Folder name can not be empty');
+        Exit;
+      end;
+      if NewFolderName=TLFolders.FocusedNode.Texts[0] then
+      begin
+        Exit;
+      end;
+
+      NewFolderName := StringReplace(NewFolderName, FMailBoxSeparator, '_',[rfReplaceAll, rfIgnoreCase]);
+      if TLFolders.FocusedNode.Parent<>TLFolders.Root then
+        NewFolderName := GetOriginalFolderName(TLFolders.FocusedNode.Parent) + FMailBoxSeparator + ConvertStringToUTF7Imap(NewFolderName);
+      Imap.RenameFolder(GetOriginalFolderName(TLFolders.FocusedNode), NewFolderName);
+      Imap.SubscribeFolder(NewFolderName);
       GetFolderList;
     end;
   end;
@@ -685,18 +824,19 @@ procedure TFMailBox.BDeleteFolderClick(Sender: TObject);
 
   procedure DeleteFolder(ANode: TcxTreelistNode);
   begin
-    Imap.UnsubscribeMailBox(GetOriginalFolderName(ANode));
-    Imap.DeleteMailBox(GetOriginalFolderName(ANode));
+    Imap.UnsubscribeFolder(GetOriginalFolderName(ANode));
+    Imap.DeleteFolder(GetOriginalFolderName(ANode));
 //Костыль
 //После DeleteMailBox сервер отключает соединение
-//Но Indy об ътом не знает и Connected не показывает обрыв связи
-//Поэтому ловим Exeption - EIdConnClosedGracefully
-//и переподключаеися
+//Но Indy (и IPWorks) об ътом не знает и Connected не показывает обрыв связи
+//Поэтому ловим Exeption в Indy - EIdConnClosedGracefully
+//Поэтому ловим Exeption в IPWorks - Interrupt
+//и переподключаемся
     try
-      Imap.Disconnect(True);
-      Imap.Connect;
+      Imap.Logout;
+      Imap.Login;
     except
-      Imap.Connect;
+      Imap.Login;
     end;
   end;
 
@@ -718,12 +858,8 @@ procedure TFMailBox.BDeleteFolderClick(Sender: TObject);
   end;
 
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
   if TLFolders.FocusedNode<>nil then
   begin
@@ -751,18 +887,14 @@ end;
 
 procedure TFMailBox.BSubscribeFolderClick(Sender: TObject);
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
   if TLFolders.FocusedNode<>nil then
   begin
     StopWork;
 
-    Imap.SubscribeMailBox(GetOriginalFolderName(TLFolders.FocusedNode));
+    Imap.SubscribeFolder(GetOriginalFolderName(TLFolders.FocusedNode));
     ShowMessage(Format('The folder "%s" has been subscribed.', [GetFolderName(TLFolders.FocusedNode)]));
     GetFolderList;
   end;
@@ -770,18 +902,14 @@ end;
 
 procedure TFMailBox.BUnSubscribeFolderClick(Sender: TObject);
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
   if TLFolders.FocusedNode<>nil then
   begin
     StopWork;
 
-    Imap.UnsubscribeMailBox(GetOriginalFolderName(TLFolders.FocusedNode));
+    Imap.UnsubscribeFolder(GetOriginalFolderName(TLFolders.FocusedNode));
     ShowMessage(Format('The folder "%s" has been unsubscribed.', [GetFolderName(TLFolders.FocusedNode)]));
     GetFolderList;
   end;
@@ -789,12 +917,8 @@ end;
 
 procedure TFMailBox.BPurgeClick(Sender: TObject);
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
   if TLFolders.FocusedNode<>nil then
   begin
@@ -802,7 +926,8 @@ begin
 
     if (MessageDlg('Purge all marked as deleted messages in selected folder?', mtConfirmation, [mbYes, mbNo], 0)=mrYes) then
     begin
-      Imap.ExpungeMailBox;
+      Imap.SelectFolder(GetOriginalFolderName(TLFolders.FocusedNode));
+      Imap.ExpungeFolder;
       GetFolderList;
     end;
   end;
@@ -813,14 +938,10 @@ var
   I: Integer;
   MessagesCount: Integer;
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
-  if TLFolders.FocusedNode<>nil then
+  if TLFolders.FocusedNode <> nil then
   begin
     if (MessageDlg('Delete all messages in selected folder?', mtConfirmation, [mbYes, mbNo], 0)=mrNo) then
     begin
@@ -831,21 +952,54 @@ begin
 
     StartWork('Clear Folder');
     try
-      MessagesCount := Imap.MailBox.TotalMsgs;
+      Imap.SelectFolder(GetOriginalFolderName(TLFolders.FocusedNode));
+      MessagesCount := Imap.SelectedCount;
       for I := 1 to MessagesCount do
       begin
         if InWork then
         begin
-          SetWorkProcess(IntToStr(I) + '/' + IntToStr(MessagesCount));
+          SetWorkProcess(IntToStr(I) + '/' + IntToStr(FMessagesCount));
           Application.ProcessMessages;
         end
         else
+        begin
           Exit;
+        end;
 
-        Imap.DeleteMsgs([I]);
+        Imap.DeleteMess(I);
       end;
     finally
-      Imap.ExpungeMailBox;
+      Imap.ExpungeFolder;
+      StopWork;
+      GetFolderList;
+    end;
+  end;
+end;
+
+procedure TFMailBox.BClearFolderFastClick(Sender: TObject);
+var
+  MessagesCount: Integer;
+begin
+  if not(CheckConnected) then
+    Exit;
+
+  if TLFolders.FocusedNode <> nil then
+  begin
+    if (MessageDlg('Delete all messages in selected folder?', mtConfirmation, [mbYes, mbNo], 0)=mrNo) then
+    begin
+      Exit;
+    end;
+
+    StopWork;
+
+    StartWork('Clear Folder');
+    try
+      Imap.SelectFolder(GetOriginalFolderName(TLFolders.FocusedNode));
+      MessagesCount := Imap.SelectedCount;
+
+      Imap.IMAPcommand('STORE 1:' + IntToStr(MessagesCount) + ' +FLAGS.SILENT (\Deleted)');
+    finally
+      Imap.ExpungeFolder;
       StopWork;
       GetFolderList;
     end;
@@ -854,12 +1008,8 @@ end;
 
 procedure TFMailBox.BGetMessagesListClick(Sender: TObject);
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
   StopWork;
 
@@ -868,30 +1018,26 @@ end;
 
 procedure TFMailBox.LVMessagesDblClick(Sender: TObject);
 var
-  StringStream: TStringStream;
+  MimeMessage: TMimeMess;
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
-  if (Imap.Connected) and (LVMessages.Selected<>nil) then
+  if (Imap.Capability) and (LVMessages.Selected<>nil) then
   begin
     StopWork;
 
-    Imap.RetrievePeek(Integer(LVMessages.Selected.Data), MailMessage);
     MMessage.Clear;
-
-    StringStream := TStringStream.Create;
+    MimeMessage := TMimeMess.Create;
     try
-      MailMessage.SaveToStream(StringStream);
-      StringStream.Position := 0;
-      MMessage.Lines.LoadFromStream(StringStream);
+      Imap.FetchMess(Integer(LVMessages.Selected.Data), MimeMessage.Lines);
+      MMessage.Lines.AddStrings(MimeMessage.Lines);
     finally
-      StringStream.Free;
+      MimeMessage.Free;
     end;
+
+    MMessage.SelStart := 0;
+    MMessage.SelLength := 0;
   end
   else
   begin
@@ -901,12 +1047,8 @@ end;
 
 procedure TFMailBox.BDeleteMessageClick(Sender: TObject);
 begin
-  if not(Imap.Connected) then
-  begin
-    ShowMessage('You are not connected. Please click Login to connect.');
-    PCMailbox.ActivePageIndex := 0;
+  if not(CheckConnected) then
     Exit;
-  end;
 
   if (LVMessages.Selected<>nil) and (LVMessages.SelCount=1) then
   begin
@@ -914,7 +1056,7 @@ begin
 
     if (MessageDlg('Do you wish to delete the message?', mtConfirmation, [mbYes, mbNo], 0)=mrYes) then
     begin
-      Imap.DeleteMsgs([StrToInt(LVMessages.Selected.Caption)]);
+      Imap.DeleteMess(Integer(LVMessages.Selected.Data));
       GetMessageList;
     end;
   end;
@@ -984,6 +1126,11 @@ begin
 
     SaveProfiles(LCBProfiles);
   end;
+end;
+
+procedure TFMailBox.TSMessagesShow(Sender: TObject);
+begin
+  SendMessage (Application.MainForm.Handle, WM_SIZE, 0, 0);
 end;
 
 end.

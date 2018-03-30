@@ -14,7 +14,7 @@ object FCopyProgress: TFCopyProgress
   Font.Style = []
   OldCreateOrder = False
   Position = poMainFormCenter
-  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
@@ -36,7 +36,7 @@ object FCopyProgress: TFCopyProgress
       Width = 75
       Height = 25
       Caption = 'Start Copy'
-      TabOrder = 2
+      TabOrder = 4
       OnClick = BStartCopyClick
     end
     object BStopCopy: TcxButton
@@ -45,20 +45,24 @@ object FCopyProgress: TFCopyProgress
       Width = 75
       Height = 25
       Caption = 'Stop Copy'
-      TabOrder = 3
+      TabOrder = 5
       OnClick = BStopCopyClick
     end
     object TEDSTFolder: TcxTextEdit
       Left = 111
+<<<<<<< HEAD
+      Top = 419
+=======
       Top = 470
+>>>>>>> 0a145d93f599060a4f79c3f9372842351522ec00
       Properties.ReadOnly = True
       Style.HotTrack = False
-      TabOrder = 1
+      TabOrder = 2
       Width = 121
     end
     object TLFolders: TcxTreeList
       Left = 19
-      Top = 22
+      Top = 223
       Width = 250
       Height = 150
       Bands = <
@@ -71,7 +75,7 @@ object FCopyProgress: TFCopyProgress
       OptionsSelection.HideFocusRect = False
       OptionsView.ColumnAutoWidth = True
       OptionsView.FocusRect = False
-      TabOrder = 0
+      TabOrder = 1
       TabStop = False
       Data = {
         00000500BC0000000F00000044617461436F6E74726F6C6C6572310500000012
@@ -145,8 +149,26 @@ object FCopyProgress: TFCopyProgress
       Width = 75
       Height = 25
       Caption = 'Close'
-      TabOrder = 4
+      TabOrder = 6
       OnClick = BCloseClick
+    end
+    object SEThreadsCount: TcxSpinEdit
+      Left = 111
+      Top = 482
+      Properties.MaxValue = 10.000000000000000000
+      Properties.MinValue = 1.000000000000000000
+      Style.HotTrack = False
+      TabOrder = 3
+      Value = 1
+      Width = 121
+    end
+    object LBLog: TcxListBox
+      Left = 19
+      Top = 22
+      Width = 562
+      Height = 195
+      ItemHeight = 13
+      TabOrder = 0
     end
     object dxLayoutControl1Group_Root: TdxLayoutGroup
       AlignHorz = ahClient
@@ -187,7 +209,7 @@ object FCopyProgress: TFCopyProgress
       LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
       ButtonOptions.Buttons = <>
       LayoutDirection = ldHorizontal
-      Index = 3
+      Index = 4
     end
     object dxLayoutSeparatorItem1: TdxLayoutSeparatorItem
       Parent = dxLayoutControl1Group_Root
@@ -235,7 +257,7 @@ object FCopyProgress: TFCopyProgress
       LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
       Control = TLFolders
       ControlOptions.ShowBorder = False
-      Index = 0
+      Index = 1
     end
     object dxLayoutItem5: TdxLayoutItem
       Parent = dxLayoutGroup3
@@ -247,6 +269,47 @@ object FCopyProgress: TFCopyProgress
       ControlOptions.ShowBorder = False
       Index = 2
     end
+    object dxLayoutGroup4: TdxLayoutGroup
+      Parent = dxLayoutControl1Group_Root
+      AlignVert = avBottom
+      CaptionOptions.Text = 'New Group'
+      CaptionOptions.Visible = False
+      ButtonOptions.Buttons = <>
+      LayoutDirection = ldHorizontal
+      Index = 3
+    end
+    object dxLayoutItem6: TdxLayoutItem
+      Parent = dxLayoutGroup4
+      CaptionOptions.Text = 'Threads Count'
+      Control = SEThreadsCount
+      ControlOptions.ShowBorder = False
+      Index = 0
+    end
+    object dxLayoutItem8: TdxLayoutItem
+      Parent = dxLayoutGroup1
+      CaptionOptions.Text = 'cxListBox1'
+      CaptionOptions.Visible = False
+      Visible = False
+      Control = LBLog
+      ControlOptions.ShowBorder = False
+      Index = 0
+    end
+  end
+  object StatusBar: TdxStatusBar
+    Left = 0
+    Top = 580
+    Width = 600
+    Height = 20
+    Panels = <
+      item
+        PanelStyleClassName = 'TdxStatusBarTextPanelStyle'
+        Width = 200
+      end>
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = []
   end
   object StatusBar: TdxStatusBar
     Left = 0
@@ -279,66 +342,20 @@ object FCopyProgress: TFCopyProgress
     object dxLayoutSkinLookAndFeel1: TdxLayoutSkinLookAndFeel
     end
   end
-  object SRCImap: TIdIMAP4
-    IOHandler = SRCTLS
-    SASLMechanisms = <>
-    MilliSecsToWaitToClearBuffer = 10
-    Left = 232
-    Top = 216
+  object TDoWork: TTimer
+    OnTimer = TDoWorkTimer
+    Left = 60
+    Top = 80
   end
-  object DSTImap: TIdIMAP4
-    IOHandler = DSTTLS
-    SASLMechanisms = <>
-    MilliSecsToWaitToClearBuffer = 10
-    Left = 364
-    Top = 216
-  end
-  object MailMessage: TIdMessage
-    AttachmentEncoding = 'UUE'
-    BccList = <>
-    CCList = <>
-    Encoding = meDefault
-    FromList = <
-      item
-      end>
-    Recipients = <>
-    ReplyTo = <>
-    ConvertPreamble = True
-    Left = 300
-    Top = 216
-  end
-  object SRCTLS: TIdSSLIOHandlerSocketOpenSSL
-    Destination = ':143'
-    MaxLineAction = maException
-    Port = 143
-    DefaultPort = 0
-    SSLOptions.Mode = sslmUnassigned
-    SSLOptions.VerifyMode = []
-    SSLOptions.VerifyDepth = 0
-    Left = 231
-    Top = 270
-  end
-  object DSTTLS: TIdSSLIOHandlerSocketOpenSSL
-    Destination = ':143'
-    MaxLineAction = maException
-    Port = 143
-    DefaultPort = 0
-    SSLOptions.Mode = sslmUnassigned
-    SSLOptions.VerifyMode = []
-    SSLOptions.VerifyDepth = 0
-    Left = 363
-    Top = 274
-  end
-  object TSRCImapTimeout: TTimer
-    Enabled = False
-    OnTimer = TSRCImapTimeoutTimer
-    Left = 136
-    Top = 216
-  end
-  object TDSTImapTimeout: TTimer
-    OnTimer = TDSTImapTimeoutTimer
-    Left = 460
-    Top = 216
+  object OmniEventMonitor: TOmniEventMonitor
+    OnPoolThreadCreated = OmniEventMonitorPoolThreadCreated
+    OnPoolThreadDestroying = OmniEventMonitorPoolThreadDestroying
+    OnPoolThreadKilled = OmniEventMonitorPoolThreadKilled
+    OnPoolWorkItemCompleted = OmniEventMonitorPoolWorkItemCompleted
+    OnTaskMessage = OmniEventMonitorTaskMessage
+    OnTaskTerminated = OmniEventMonitorTaskTerminated
+    Left = 160
+    Top = 164
   end
   object IdLogEvent1: TIdLogEvent
     Left = 300

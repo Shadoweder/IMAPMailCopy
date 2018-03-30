@@ -3,8 +3,8 @@ object FMailBox: TFMailBox
   Top = 0
   BorderStyle = bsNone
   Caption = 'FMailBox'
-  ClientHeight = 500
-  ClientWidth = 362
+  ClientHeight = 532
+  ClientWidth = 421
   Color = clBtnFace
   Constraints.MinHeight = 500
   Constraints.MinWidth = 300
@@ -22,18 +22,18 @@ object FMailBox: TFMailBox
   object PCMailBox: TcxPageControl
     Left = 0
     Top = 0
-    Width = 362
-    Height = 480
+    Width = 421
+    Height = 512
     Align = alClient
     Color = 16775410
     ParentBackground = False
     ParentColor = False
     TabOrder = 0
-    Properties.ActivePage = TSSettings
+    Properties.ActivePage = TSFolders
     Properties.CustomButtons.Buttons = <>
-    ClientRectBottom = 474
+    ClientRectBottom = 506
     ClientRectLeft = 3
-    ClientRectRight = 356
+    ClientRectRight = 415
     ClientRectTop = 26
     object TSSettings: TcxTabSheet
       Caption = 'Settings'
@@ -41,8 +41,8 @@ object FMailBox: TFMailBox
       object dxLayoutControl2: TdxLayoutControl
         Left = 0
         Top = 0
-        Width = 353
-        Height = 448
+        Width = 412
+        Height = 480
         Align = alClient
         TabOrder = 0
         LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
@@ -87,7 +87,7 @@ object FMailBox: TFMailBox
           Width = 121
         end
         object ChBUseSASL: TcxCheckBox
-          Left = 277
+          Left = 336
           Top = 130
           Caption = 'Use SASL'
           Style.HotTrack = False
@@ -113,7 +113,7 @@ object FMailBox: TFMailBox
           OnClick = BLoginClick
         end
         object ChBUseTLS: TcxCheckBox
-          Left = 191
+          Left = 250
           Top = 130
           Caption = 'Use TLS/SSL'
           Style.HotTrack = False
@@ -122,7 +122,7 @@ object FMailBox: TFMailBox
         end
         object BSaveProfile: TcxButton
           Left = 10
-          Top = 413
+          Top = 445
           Width = 75
           Height = 25
           Caption = 'Save Profile'
@@ -130,8 +130,8 @@ object FMailBox: TFMailBox
           OnClick = BSaveProfileClick
         end
         object BDeleteProfile: TcxButton
-          Left = 236
-          Top = 413
+          Left = 275
+          Top = 445
           Width = 75
           Height = 25
           Caption = 'Delete Profile'
@@ -139,8 +139,8 @@ object FMailBox: TFMailBox
           OnClick = BDeleteProfileClick
         end
         object BLoadProfile: TcxButton
-          Left = 123
-          Top = 413
+          Left = 143
+          Top = 445
           Width = 75
           Height = 25
           Caption = 'Load Profile'
@@ -149,7 +149,7 @@ object FMailBox: TFMailBox
         end
         object LCBProfiles: TcxLookupComboBox
           Left = 74
-          Top = 386
+          Top = 418
           Properties.DropDownListStyle = lsFixedList
           Properties.HideSelection = False
           Properties.ListColumns = <
@@ -194,8 +194,8 @@ object FMailBox: TFMailBox
           Width = 145
         end
         object IReloadProfiles: TcxImage
-          Left = 323
-          Top = 386
+          Left = 382
+          Top = 418
           Picture.Data = {
             0B546478504E47496D61676589504E470D0A1A0A0000000D4948445200000010
             0000001008060000001FF3FF61000000017352474200AECE1CE9000000046741
@@ -436,8 +436,8 @@ object FMailBox: TFMailBox
       object dxLayoutControl4: TdxLayoutControl
         Left = 0
         Top = 0
-        Width = 353
-        Height = 448
+        Width = 412
+        Height = 480
         Align = alClient
         TabOrder = 0
         LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
@@ -521,7 +521,7 @@ object FMailBox: TFMailBox
           end
         end
         object BGetFoldersList: TcxButton
-          Left = 243
+          Left = 302
           Top = 10
           Width = 100
           Height = 25
@@ -530,76 +530,103 @@ object FMailBox: TFMailBox
           OnClick = BGetFoldersListClick
         end
         object BNewFolder: TcxButton
-          Left = 243
-          Top = 53
-          Width = 100
-          Height = 25
-          Caption = 'New Folder'
-          TabOrder = 2
-          OnClick = BNewFolderClick
-        end
-        object BDeleteFolder: TcxButton
-          Left = 243
+          Left = 302
           Top = 84
           Width = 100
           Height = 25
-          Caption = 'Delete Folder'
+          Caption = 'New child Folder'
           TabOrder = 3
-          OnClick = BDeleteFolderClick
+          OnClick = BNewFolderClick
         end
-        object BSubscribeFolder: TcxButton
-          Left = 243
-          Top = 115
-          Width = 100
-          Height = 25
-          Caption = 'Subscribe Folder'
-          TabOrder = 4
-          OnClick = BSubscribeFolderClick
-        end
-        object BUnSubscribeFolder: TcxButton
-          Left = 243
+        object BDeleteFolder: TcxButton
+          Left = 302
           Top = 146
           Width = 100
           Height = 25
-          Caption = 'UnSubscribe Folder'
+          Caption = 'Delete Folder'
           TabOrder = 5
+          OnClick = BDeleteFolderClick
+        end
+        object BSubscribeFolder: TcxButton
+          Left = 302
+          Top = 177
+          Width = 100
+          Height = 25
+          Caption = 'Subscribe Folder'
+          TabOrder = 6
+          OnClick = BSubscribeFolderClick
+        end
+        object BUnSubscribeFolder: TcxButton
+          Left = 302
+          Top = 208
+          Width = 100
+          Height = 25
+          Caption = 'UnSubscribe Folder'
+          TabOrder = 7
           OnClick = BUnSubscribeFolderClick
         end
         object BPurge: TcxButton
-          Left = 243
-          Top = 189
+          Left = 302
+          Top = 251
           Width = 100
           Height = 25
           Caption = 'Purge Deleted'
-          TabOrder = 6
+          TabOrder = 8
           OnClick = BPurgeClick
         end
         object BClearFolder: TcxButton
-          Left = 243
-          Top = 232
+          Left = 302
+          Top = 294
           Width = 100
           Height = 25
           Caption = 'Clear Folder'
-          TabOrder = 7
+          TabOrder = 9
           OnClick = BClearFolderClick
         end
         object BSelectAllFolders: TcxButton
-          Left = 243
-          Top = 275
+          Left = 302
+          Top = 368
           Width = 100
           Height = 25
           Caption = 'Select All Folders'
-          TabOrder = 8
+          TabOrder = 11
           OnClick = BSelectAllFoldersClick
         end
         object BUnSelectAllFolders: TcxButton
-          Left = 243
-          Top = 306
+          Left = 302
+          Top = 399
           Width = 100
           Height = 25
           Caption = 'UnSelect All Folders'
-          TabOrder = 9
+          TabOrder = 12
           OnClick = BUnSelectAllFoldersClick
+        end
+        object BRenameFolder: TcxButton
+          Left = 302
+          Top = 115
+          Width = 75
+          Height = 25
+          Caption = 'Rename Folder'
+          TabOrder = 4
+          OnClick = BRenameFolderClick
+        end
+        object BClearFolderFast: TcxButton
+          Left = 302
+          Top = 325
+          Width = 75
+          Height = 25
+          Caption = 'Clear Folder Fast'
+          TabOrder = 10
+          OnClick = BClearFolderFastClick
+        end
+        object BNewRootFolder: TcxButton
+          Left = 302
+          Top = 53
+          Width = 75
+          Height = 25
+          Caption = 'New root Folder'
+          TabOrder = 2
+          OnClick = BNewRootFolderClick
         end
         object dxLayoutControl4Group_Root: TdxLayoutGroup
           AlignHorz = ahClient
@@ -665,7 +692,7 @@ object FMailBox: TFMailBox
           LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
           Control = BNewFolder
           ControlOptions.ShowBorder = False
-          Index = 2
+          Index = 3
         end
         object dxLayoutItem2: TdxLayoutItem
           Parent = dxLayoutGroup7
@@ -674,7 +701,7 @@ object FMailBox: TFMailBox
           LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
           Control = BDeleteFolder
           ControlOptions.ShowBorder = False
-          Index = 3
+          Index = 5
         end
         object dxLayoutItem15: TdxLayoutItem
           Parent = dxLayoutGroup7
@@ -683,7 +710,7 @@ object FMailBox: TFMailBox
           LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
           Control = BSubscribeFolder
           ControlOptions.ShowBorder = False
-          Index = 4
+          Index = 6
         end
         object dxLayoutItem16: TdxLayoutItem
           Parent = dxLayoutGroup7
@@ -692,13 +719,13 @@ object FMailBox: TFMailBox
           LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
           Control = BUnSubscribeFolder
           ControlOptions.ShowBorder = False
-          Index = 5
+          Index = 7
         end
         object dxLayoutSeparatorItem3: TdxLayoutSeparatorItem
           Parent = dxLayoutGroup7
           CaptionOptions.Text = 'Separator'
           LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
-          Index = 6
+          Index = 8
         end
         object dxLayoutItem17: TdxLayoutItem
           Parent = dxLayoutGroup7
@@ -707,12 +734,12 @@ object FMailBox: TFMailBox
           LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
           Control = BPurge
           ControlOptions.ShowBorder = False
-          Index = 7
+          Index = 9
         end
         object dxLayoutSeparatorItem4: TdxLayoutSeparatorItem
           Parent = dxLayoutGroup7
           CaptionOptions.Text = 'Separator'
-          Index = 8
+          Index = 10
         end
         object dxLayoutItem22: TdxLayoutItem
           Parent = dxLayoutGroup7
@@ -721,12 +748,12 @@ object FMailBox: TFMailBox
           LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
           Control = BClearFolder
           ControlOptions.ShowBorder = False
-          Index = 9
+          Index = 11
         end
         object dxLayoutSeparatorItem7: TdxLayoutSeparatorItem
           Parent = dxLayoutGroup7
           CaptionOptions.Text = 'Separator'
-          Index = 10
+          Index = 13
         end
         object dxLayoutItem28: TdxLayoutItem
           Parent = dxLayoutGroup7
@@ -734,7 +761,7 @@ object FMailBox: TFMailBox
           CaptionOptions.Visible = False
           Control = BSelectAllFolders
           ControlOptions.ShowBorder = False
-          Index = 11
+          Index = 14
         end
         object dxLayoutItem29: TdxLayoutItem
           Parent = dxLayoutGroup7
@@ -742,18 +769,43 @@ object FMailBox: TFMailBox
           CaptionOptions.Visible = False
           Control = BUnSelectAllFolders
           ControlOptions.ShowBorder = False
+          Index = 15
+        end
+        object dxLayoutItem9: TdxLayoutItem
+          Parent = dxLayoutGroup7
+          CaptionOptions.Text = 'cxButton1'
+          CaptionOptions.Visible = False
+          Control = BRenameFolder
+          ControlOptions.ShowBorder = False
+          Index = 4
+        end
+        object dxLayoutItem31: TdxLayoutItem
+          Parent = dxLayoutGroup7
+          CaptionOptions.Text = 'cxButton1'
+          CaptionOptions.Visible = False
+          Control = BClearFolderFast
+          ControlOptions.ShowBorder = False
           Index = 12
+        end
+        object dxLayoutItem32: TdxLayoutItem
+          Parent = dxLayoutGroup7
+          CaptionOptions.Text = 'cxButton1'
+          CaptionOptions.Visible = False
+          Control = BNewRootFolder
+          ControlOptions.ShowBorder = False
+          Index = 2
         end
       end
     end
     object TSMessages: TcxTabSheet
       Caption = 'Messages'
       ImageIndex = 2
+      OnShow = TSMessagesShow
       object dxLayoutControl1: TdxLayoutControl
         Left = 0
         Top = 0
-        Width = 353
-        Height = 448
+        Width = 412
+        Height = 480
         Align = alClient
         TabOrder = 0
         LayoutLookAndFeel = dxLayoutSkinLookAndFeel1
@@ -788,9 +840,9 @@ object FMailBox: TFMailBox
             end
             item
               Caption = 'UID'
-              MaxWidth = 40
-              MinWidth = 40
-              Width = 40
+              MaxWidth = 1
+              MinWidth = 1
+              Width = 1
             end
             item
               AutoSize = True
@@ -798,14 +850,14 @@ object FMailBox: TFMailBox
               MaxWidth = 200
               MinWidth = 100
               WidthType = (
-                -95)
+                -75)
             end
             item
               AutoSize = True
               Caption = 'Subject'
               MinWidth = 150
               WidthType = (
-                -94)
+                -75)
             end
             item
               Caption = 'Data'
@@ -840,7 +892,7 @@ object FMailBox: TFMailBox
           OnClick = BGetMessagesListClick
         end
         object BDeleteMessage: TcxButton
-          Left = 253
+          Left = 312
           Top = 226
           Width = 90
           Height = 25
@@ -961,8 +1013,8 @@ object FMailBox: TFMailBox
   end
   object StatusBar: TdxStatusBar
     Left = 0
-    Top = 480
-    Width = 362
+    Top = 512
+    Width = 421
     Height = 20
     Panels = <
       item
@@ -976,8 +1028,8 @@ object FMailBox: TFMailBox
     Font.Style = []
   end
   object dxLayoutLookAndFeelList1: TdxLayoutLookAndFeelList
-    Left = 124
-    Top = 352
+    Left = 140
+    Top = 388
     object dxLayoutSkinLookAndFeel1: TdxLayoutSkinLookAndFeel
       LookAndFeel.SkinName = 'Office2007Blue'
     end
@@ -985,46 +1037,14 @@ object FMailBox: TFMailBox
   object dxSkinController1: TdxSkinController
     NativeStyle = False
     SkinName = 'Office2007Blue'
-    Left = 36
-    Top = 372
-  end
-  object Imap: TIdIMAP4
-    IOHandler = TLS
-    SASLMechanisms = <>
-    MilliSecsToWaitToClearBuffer = 10
-    Left = 27
-    Top = 294
-  end
-  object MailMessage: TIdMessage
-    AttachmentEncoding = 'UUE'
-    BccList = <>
-    CCList = <>
-    Encoding = meDefault
-    FromList = <
-      item
-      end>
-    Recipients = <>
-    ReplyTo = <>
-    ConvertPreamble = True
-    Left = 123
-    Top = 294
-  end
-  object TLS: TIdSSLIOHandlerSocketOpenSSL
-    Destination = ':143'
-    MaxLineAction = maException
-    Port = 143
-    DefaultPort = 0
-    SSLOptions.Mode = sslmUnassigned
-    SSLOptions.VerifyMode = []
-    SSLOptions.VerifyDepth = 0
-    Left = 75
-    Top = 294
+    Left = 84
+    Top = 388
   end
   object MDProfiles: TdxMemData
     Indexes = <>
     SortOptions = []
-    Left = 175
-    Top = 330
+    Left = 211
+    Top = 298
     object MDProfilesServer: TStringField
       FieldName = 'Server'
       Size = 100
@@ -1050,13 +1070,13 @@ object FMailBox: TFMailBox
   end
   object DSProfiles: TDataSource
     DataSet = MDProfiles
-    Left = 215
-    Top = 330
+    Left = 211
+    Top = 346
   end
   object TImapTimeout: TTimer
     Enabled = False
     OnTimer = TImapTimeoutTimer
-    Left = 275
-    Top = 290
+    Left = 119
+    Top = 334
   end
 end
